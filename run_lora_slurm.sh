@@ -1,13 +1,19 @@
 #!/bin/bash
-
-RANK=$SLURM_PROCID
-WORLD_SIZE=$SLURM_NTASKS
-NUM_CLIENTS=$((WORLD_SIZE - 1))
-ARGS="$@"
+#SBATCH --job-name=federated_learning
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:5
+#SBATCH -o output_log/output.log
+#SBATCH -e output_log/error.log
+#SBATCH -t 2:00:00
+#SBATCH --ntasks=4
+#SBATCH --chdir=/gpfs/u/home/FNAI/FNAIhrnb/barn/DP-LoRA/Federated_Learning
 
 # Activate the Conda Environment
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate DPLoRA
+
+# Setup NO_PROXY to bypass proxy for local communication
+export NO_PROXY=127.0.0.1,localhost
 
 # Set the environment variable before running the script
 # export TRANSFORMERS_CACHE=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
@@ -17,14 +23,8 @@ export HF_HOME=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
 # Create the cache directory if doesn't exist
 mkdir -p /gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
 
-# Set NO_PROXY to bypass proxy for local communication
-export NO_PROXY=127.0.0.1,localhost
+echo "Start Simulation"
 
-if [ "$RANK" == "0" ]; then
-    echo "Starting KD server"
-    python3 server.py $ARGS --num_clients $NUM_CLIENTS --rank $RANK
-else
-    sleep 3
-    echo "Starting Clients"
-    python3 lora-client.py $ARGS --num_clients $NUM_CLIENTS --rank $RANK
-fi
+chmod +x run-lora.sh
+
+srun ./run-lora.sh  
