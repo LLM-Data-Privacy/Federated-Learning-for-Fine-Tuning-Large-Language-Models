@@ -26,6 +26,8 @@ from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers import AutoModelForSequenceClassification
 from transformers import AdamW
 
+from sklearn.model_selection import train_test_split
+
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda")
 # CHECKPOINT = "bert-base-uncased"
@@ -42,8 +44,10 @@ def load_data():
         return tokenizer(examples["sentence"], truncation=True)
 
     # random 100 samples
-    population_train = random.sample(range(len(raw_datasets["train"])), 100)
+    population_train = random.sample(range(len(raw_datasets["train"])), 900)
     population_test = random.sample(range(len(raw_datasets["validation"])), 100)
+    
+    # population_train, population_test = train_test_split(range(len(raw_datasets["train"])), test_size=0.1)
 
     tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
     tokenized_datasets["train"] = tokenized_datasets["train"].select(population_train)
