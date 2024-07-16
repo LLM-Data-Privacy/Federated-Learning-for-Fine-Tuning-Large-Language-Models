@@ -11,6 +11,7 @@ from peft import (
     set_peft_model_state_dict,
     LoraConfig,
 )
+from flwr.client.mod.localdp_mod import LocalDpMod
 
 import logging
 logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
@@ -83,6 +84,8 @@ def main():
     class Client(fl.client.NumPyClient):
         def get_parameters(self, config=None):
             state_dict = get_peft_model_state_dict(net)
+            # Apply Differential Privacy
+            local_dp_obj.apply(state_dict)
             return [val.cpu().numpy() for _, val in state_dict.items()]
 
         def set_parameters(self, parameters):
@@ -94,13 +97,26 @@ def main():
             self.set_parameters(parameters)
             logging.info(f"Client {RANK} Training Started...")
             train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
-            return self.get_parameters(), len(trainloader), {}
+            # Apply Local Differential Privacy before sending parameters to the server
+            state_dict = get_peft_model_state_dict(net)
+            local_dp_obj.apply(state_dict)
+            
+            #return self.get_parameters(), len(trainloader), {}
+            return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
 
         def evaluate(self, parameters, config):
             self.set_parameters(parameters)
             loss, accuracy = test(net, testloader)
             return float(loss), len(testloader), {"accuracy": float(accuracy)}
 
+    # Apply Differential Privacy
+    local_dp_obj = LocalDpMod(
+        epsilon=8,
+        delta=1e-5,
+        clipping_norm=10
+    )
+    
+    
     # Start client
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
 
