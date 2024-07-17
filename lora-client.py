@@ -113,7 +113,8 @@ def main():
     local_dp_obj = LocalDpMod(
         epsilon=8,
         delta=1e-5,
-        clipping_norm=10
+        clipping_norm=10,
+        sensitivity=1.0,
     )
     
     
