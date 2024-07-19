@@ -85,7 +85,7 @@ def main():
         def get_parameters(self, config=None):
             state_dict = get_peft_model_state_dict(net)
             # Apply Differential Privacy
-            local_dp_obj.apply(state_dict)
+            #local_dp_obj.apply(state_dict)
             return [val.cpu().numpy() for _, val in state_dict.items()]
 
         def set_parameters(self, parameters):
@@ -98,11 +98,11 @@ def main():
             logging.info(f"Client {RANK} Training Started...")
             train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
             # Apply Local Differential Privacy before sending parameters to the server
-            state_dict = get_peft_model_state_dict(net)
-            local_dp_obj.apply(state_dict)
+            #state_dict = get_peft_model_state_dict(net)
+            #local_dp_obj.apply(state_dict)
             
-            #return self.get_parameters(), len(trainloader), {}
-            return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
+            return self.get_parameters(), len(trainloader), {}
+            #return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
 
         def evaluate(self, parameters, config):
             self.set_parameters(parameters)
@@ -117,9 +117,18 @@ def main():
         sensitivity=1.0,
     )
     
+    # define client fn
+    def client_fn(cid):
+        return Client()
+    
+    # Start client App
+    app = fl.client.ClientApp(
+        client_fn=client_fn,
+        mods = [local_dp_obj]
+    )
     
     # Start client
-    fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
+    #fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
 
 
 if __name__ == "__main__":
