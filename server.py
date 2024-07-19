@@ -28,6 +28,7 @@ if __name__ == "__main__":
     )
 
     # Start server
+    """
     t1 = time.perf_counter()
     history = fl.server.start_server(
         server_address="0.0.0.0:8080",
@@ -39,3 +40,12 @@ if __name__ == "__main__":
         elapsed_time_secs=t2 - t1
     )
     save_run_as_json(args, history, extra_data=extra_data)
+    """
+    
+    # Start server app
+    server_app = fl.server.ServerApp(
+        config=fl.server.ServerConfig(num_rounds=args.num_rounds),
+        strategy=strategy,
+    )
+    save_run_as_json(args, server_app._server)
+    
