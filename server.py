@@ -42,10 +42,22 @@ if __name__ == "__main__":
     save_run_as_json(args, history, extra_data=extra_data)
     """
     
+    def server_fn():
+        config = fl.server.ServerConfig(num_rounds=args.num_rounds)
+        strategy=strategy
+        return fl.server.ServerAppComponents(
+            config=config, 
+            strategy=strategy
+            )
+    
+    server_app = fl.server.ServerApp(server_fn=server_fn)
+    
+    """
     # Start server app
     server_app = fl.server.ServerApp(
         config=fl.server.ServerConfig(num_rounds=args.num_rounds),
         strategy=strategy,
     )
-    save_run_as_json(args, server_app._server)
+    """
+    #save_run_as_json(args, server_app._server)
     
