@@ -47,7 +47,7 @@ def train(net, trainloader, epochs, lr):
     
     privacy_engine = PrivacyEngine(
         net,
-        sample_rate=sample_rate,
+        #sample_rate=sample_rate,
         noise_multiplier=1.5,
         max_grad_norm=max_grad_norm
     )
