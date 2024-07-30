@@ -3,7 +3,6 @@
 #SBATCH --nodes=2
 #SBATCH --ntasks=6  # 1 for superlink, 1 for server, 4 for clients
 #SBATCH --time=01:30:00
-#SBATCH --partition=short
 
 module load gcc/8.4.0/1  cuda/10.2
 module load openmpi/4.0.3/1
