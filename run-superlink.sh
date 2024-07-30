@@ -19,10 +19,10 @@ mpirun -np 1 flower-superlink --insecure > superlink.log 2>&1 &
 
 # Run flower-client-app for 4 clients
 for i in {0..3}; do
-  mpirun -np 1 flower-client-app client:app --insecure > client_$i.log 2>&1 &
+  mpirun -np 1 flower-client-app lora-client:app --insecure > client_$i.log 2>&1 &
 done
 
 # Run flower-server-app
-mpirun -np 1 flower-server-app server:app --insecure > server.log 2>&1 &
+mpirun -np 1 flower-server-app server:server_app --insecure > server.log 2>&1 &
 
 wait
