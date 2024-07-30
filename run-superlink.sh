@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=flower_simulation
+#SBATCH --job-name=superlink
 #SBATCH --nodes=2
 #SBATCH --ntasks=6  # 1 for superlink, 1 for server, 4 for clients
 #SBATCH --time=01:30:00
