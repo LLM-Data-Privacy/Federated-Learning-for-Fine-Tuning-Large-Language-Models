@@ -58,15 +58,6 @@ def train(net, trainloader, epochs, lr):
     #    target_epsilon=epsilon, target_delta=delta, sample_rate=sample_rate
     #)
     
-    privacy_engine = PrivacyEngine(
-        net,
-        #sample_rate=sample_rate,
-        noise_multiplier=1.5,
-        max_grad_norm=max_grad_norm
-    )
-    
-    privacy_engine.attach(optimizer)
-    
     net.train()
     for i in range(epochs):
         for batch in trainloader:
@@ -76,7 +67,6 @@ def train(net, trainloader, epochs, lr):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-    privacy_engine.detach()
 
 
 def test(net, testloader):
