@@ -31,7 +31,7 @@ NUM_CLIENTS = args.num_clients
 NUM_SPLITS = NUM_CLIENTS + 1  # teacher also has a split
 epsilon = 8
 delta=1e-5
-max_grad_norm = 10
+max_grad_norm = 1.0
 
 
 DEVICE = torch.cuda.current_device()
@@ -41,14 +41,14 @@ def train(net, trainloader, epochs, lr):
     optimizer = AdamW(net.parameters(), lr=lr, no_deprecation_warning=True)
     
     sample_rate = len(trainloader.dataset) / len(trainloader)
-    noise_multiplier = PrivacyEngine.get_noise_multiplier(
-        target_epsilon=epsilon, target_delta=delta, sample_rate=sample_rate
-    )
+    #noise_multiplier = PrivacyEngine.get_noise_multiplier(
+    #    target_epsilon=epsilon, target_delta=delta, sample_rate=sample_rate
+    #)
     
     privacy_engine = PrivacyEngine(
         net,
         sample_rate=sample_rate,
-        noise_multiplier=noise_multiplier,
+        noise_multiplier=1.5,
         max_grad_norm=max_grad_norm
     )
     
