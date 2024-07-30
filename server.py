@@ -28,7 +28,7 @@ strategy = fl.server.strategy.FedAvg(
 )
 
 # Start server
-"""
+
 t1 = time.perf_counter()
 history = fl.server.start_server(
     server_address="0.0.0.0:8080",
@@ -40,8 +40,8 @@ extra_data = dict(
     elapsed_time_secs=t2 - t1
 )
 save_run_as_json(args, history, extra_data=extra_data)
-"""
-    
+
+"""  
 def server_fn():
     config = fl.server.ServerConfig(num_rounds=args.num_rounds)
     strategy=strategy
@@ -52,11 +52,9 @@ def server_fn():
 
 server_app = fl.server.ServerApp(server_fn=server_fn)
     
-"""
 # Start server app
 server_app = fl.server.ServerApp(
     config=fl.server.ServerConfig(num_rounds=args.num_rounds),
     strategy=strategy,
 )
 """
-#save_run_as_json(args, server_app._server)

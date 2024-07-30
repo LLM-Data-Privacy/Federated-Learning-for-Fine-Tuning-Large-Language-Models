@@ -20,6 +20,7 @@ import transformers
 from transformers import AutoModelForSequenceClassification, AdamW, get_scheduler
 from arguments import parse_args
 from data_loader import load_data
+from opacus import PrivacyEngine
 
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -27,13 +28,32 @@ warnings.filterwarnings("ignore", category=UserWarning)
 args = parse_args()
 RANK = args.rank
 NUM_CLIENTS = args.num_clients
-NUM_SPLITS = NUM_CLIENTS + 1  # teacher also has a split
+NUM_SPLITS = NUM_CLIENTS #+ 1  # teacher also has a split
+epsilon = 8
+delta=1e-5
+max_grad_norm = 10
+
 
 DEVICE = torch.cuda.current_device()
 CHECKPOINT = args.client_ckpt
 
 def train(net, trainloader, epochs, lr):
     optimizer = AdamW(net.parameters(), lr=lr, no_deprecation_warning=True)
+    
+    sample_rate = len(trainloader.dataset) / len(trainloader)
+    noise_multiplier = PrivacyEngine.get_noise_multiplier(
+        target_epsilon=epsilon, target_delta=delta, sample_rate=sample_rate
+    )
+    
+    privacy_engine = PrivacyEngine(
+        net,
+        sample_rate=sample_rate,
+        noise_multiplier=noise_multiplier,
+        max_grad_norm=max_grad_norm
+    )
+    
+    privacy_engine.attach(optimizer)
+    
     net.train()
     for i in range(epochs):
         for batch in trainloader:
@@ -43,6 +63,7 @@ def train(net, trainloader, epochs, lr):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+    privacy_engine.detach()
 
 
 def test(net, testloader):
@@ -62,74 +83,51 @@ def test(net, testloader):
     accuracy = metric.compute()["accuracy"]
     return loss, accuracy
 
-#def main():
-logging.info(f"Started client {RANK}")
-net = AutoModelForSequenceClassification.from_pretrained(
-    CHECKPOINT, num_labels=2
-).to(DEVICE)
+def main():
+    logging.info(f"Started client {RANK}")
+    net = AutoModelForSequenceClassification.from_pretrained(
+        CHECKPOINT, num_labels=2
+    ).to(DEVICE)
 
-peft_config = LoraConfig(
-    task_type="SEQ_CLS", 
-    inference_mode=False, 
-    target_modules=["q_lin", "v_lin"],
-    r=args.lora_r, 
-    lora_alpha=16, 
-    lora_dropout=0.1)
+    peft_config = LoraConfig(
+        task_type="SEQ_CLS", 
+        inference_mode=False, 
+        target_modules=["q_lin", "v_lin"],
+        r=args.lora_r, 
+        lora_alpha=16, 
+        lora_dropout=0.1)
 
-net = get_peft_model(net, peft_config)
+    net = get_peft_model(net, peft_config)
 
-trainloader, testloader = load_data(args.data_path, args.data_name, RANK, NUM_SPLITS, CHECKPOINT, args.teacher_data_pct)
-peft_state_dict_keys = get_peft_model_state_dict(net).keys()
-# Flower client
-class Client(fl.client.NumPyClient):
-    def get_parameters(self, config=None):
-        state_dict = get_peft_model_state_dict(net)
-        # Apply Differential Privacy
-        #local_dp_obj.apply(state_dict)
-        return [val.cpu().numpy() for _, val in state_dict.items()]
+    trainloader, testloader = load_data(args.data_path, args.data_name, RANK, NUM_SPLITS, CHECKPOINT, args.teacher_data_pct)
+    peft_state_dict_keys = get_peft_model_state_dict(net).keys()
+    # Flower client
+    class Client(fl.client.NumPyClient):
+        def get_parameters(self, config=None):
+            state_dict = get_peft_model_state_dict(net)
+            
+            return [val.cpu().numpy() for _, val in state_dict.items()]
 
-    def set_parameters(self, parameters):
-        params_dict = zip(peft_state_dict_keys, parameters)
-        state_dict = {k: torch.Tensor(v) for k, v in params_dict}
-        set_peft_model_state_dict(net, state_dict)
+        def set_parameters(self, parameters):
+            params_dict = zip(peft_state_dict_keys, parameters)
+            state_dict = {k: torch.Tensor(v) for k, v in params_dict}
+            set_peft_model_state_dict(net, state_dict)
 
-    def fit(self, parameters, config):
-        self.set_parameters(parameters)
-        logging.info(f"Client {RANK} Training Started...")
-        train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
-        # Apply Local Differential Privacy before sending parameters to the server
-        #state_dict = get_peft_model_state_dict(net)
-        #local_dp_obj.apply(state_dict)
-        
-        return self.get_parameters(), len(trainloader), {}
-        #return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
+        def fit(self, parameters, config):
+            self.set_parameters(parameters)
+            logging.info(f"Client {RANK} Training Started...")
+            train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
+            
+            return self.get_parameters(), len(trainloader), {}
 
-    def evaluate(self, parameters, config):
-        self.set_parameters(parameters)
-        loss, accuracy = test(net, testloader)
-        return float(loss), len(testloader), {"accuracy": float(accuracy)}
+        def evaluate(self, parameters, config):
+            self.set_parameters(parameters)
+            loss, accuracy = test(net, testloader)
+            return float(loss), len(testloader), {"accuracy": float(accuracy)}
 
-# Apply Differential Privacy
-local_dp_obj = LocalDpMod(
-    epsilon=8,
-    delta=1e-5,
-    clipping_norm=10,
-    sensitivity=1.0,
-)
-
-# define client fn
-def client_fn(cid):
-    return Client()
-
-# Start client App
-app = fl.client.ClientApp(
-    client_fn=client_fn,
-    mods = [local_dp_obj]
-)
-
-# Start client
-#fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
+    # Start client
+    fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
