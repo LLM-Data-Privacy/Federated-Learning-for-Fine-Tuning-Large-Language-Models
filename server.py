@@ -18,46 +18,45 @@ def weighted_average(metrics):
     # Aggregate and return custom metric (weighted average)
     return {"accuracy": sum(accuracies) / sum(examples)}
 
-if __name__ == "__main__":
-    # Define strategy
-    strategy = fl.server.strategy.FedAvg(
-        fraction_fit=1.0,
-        fraction_evaluate=1.0,
-        evaluate_metrics_aggregation_fn=weighted_average,
-        min_available_clients=args.num_clients,
-    )
+#if __name__ == "__main__":
+# Define strategy
+strategy = fl.server.strategy.FedAvg(
+    fraction_fit=1.0,
+    fraction_evaluate=1.0,
+    evaluate_metrics_aggregation_fn=weighted_average,
+    min_available_clients=args.num_clients,
+)
 
-    # Start server
-    """
-    t1 = time.perf_counter()
-    history = fl.server.start_server(
-        server_address="0.0.0.0:8080",
-        config=fl.server.ServerConfig(num_rounds=args.num_rounds),
-        strategy=strategy,
-    )
-    t2 = time.perf_counter()
-    extra_data = dict(
-        elapsed_time_secs=t2 - t1
-    )
-    save_run_as_json(args, history, extra_data=extra_data)
-    """
+# Start server
+"""
+t1 = time.perf_counter()
+history = fl.server.start_server(
+    server_address="0.0.0.0:8080",
+    config=fl.server.ServerConfig(num_rounds=args.num_rounds),
+    strategy=strategy,
+)
+t2 = time.perf_counter()
+extra_data = dict(
+    elapsed_time_secs=t2 - t1
+)
+save_run_as_json(args, history, extra_data=extra_data)
+"""
     
-    def server_fn():
-        config = fl.server.ServerConfig(num_rounds=args.num_rounds)
+def server_fn():
+    config = fl.server.ServerConfig(num_rounds=args.num_rounds)
+    strategy=strategy
+    return fl.server.ServerAppComponents(
+        config=config, 
         strategy=strategy
-        return fl.server.ServerAppComponents(
-            config=config, 
-            strategy=strategy
-            )
+        )
+
+server_app = fl.server.ServerApp(server_fn=server_fn)
     
-    server_app = fl.server.ServerApp(server_fn=server_fn)
-    
-    """
-    # Start server app
-    server_app = fl.server.ServerApp(
-        config=fl.server.ServerConfig(num_rounds=args.num_rounds),
-        strategy=strategy,
-    )
-    """
-    #save_run_as_json(args, server_app._server)
-    
+"""
+# Start server app
+server_app = fl.server.ServerApp(
+    config=fl.server.ServerConfig(num_rounds=args.num_rounds),
+    strategy=strategy,
+)
+"""
+#save_run_as_json(args, server_app._server)

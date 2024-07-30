@@ -62,74 +62,74 @@ def test(net, testloader):
     accuracy = metric.compute()["accuracy"]
     return loss, accuracy
 
-def main():
-    logging.info(f"Started client {RANK}")
-    net = AutoModelForSequenceClassification.from_pretrained(
-        CHECKPOINT, num_labels=2
-    ).to(DEVICE)
+#def main():
+logging.info(f"Started client {RANK}")
+net = AutoModelForSequenceClassification.from_pretrained(
+    CHECKPOINT, num_labels=2
+).to(DEVICE)
 
-    peft_config = LoraConfig(
-        task_type="SEQ_CLS", 
-        inference_mode=False, 
-        target_modules=["q_lin", "v_lin"],
-        r=args.lora_r, 
-        lora_alpha=16, 
-        lora_dropout=0.1)
+peft_config = LoraConfig(
+    task_type="SEQ_CLS", 
+    inference_mode=False, 
+    target_modules=["q_lin", "v_lin"],
+    r=args.lora_r, 
+    lora_alpha=16, 
+    lora_dropout=0.1)
 
-    net = get_peft_model(net, peft_config)
+net = get_peft_model(net, peft_config)
 
-    trainloader, testloader = load_data(args.data_path, args.data_name, RANK, NUM_SPLITS, CHECKPOINT, args.teacher_data_pct)
-    peft_state_dict_keys = get_peft_model_state_dict(net).keys()
-    # Flower client
-    class Client(fl.client.NumPyClient):
-        def get_parameters(self, config=None):
-            state_dict = get_peft_model_state_dict(net)
-            # Apply Differential Privacy
-            #local_dp_obj.apply(state_dict)
-            return [val.cpu().numpy() for _, val in state_dict.items()]
+trainloader, testloader = load_data(args.data_path, args.data_name, RANK, NUM_SPLITS, CHECKPOINT, args.teacher_data_pct)
+peft_state_dict_keys = get_peft_model_state_dict(net).keys()
+# Flower client
+class Client(fl.client.NumPyClient):
+    def get_parameters(self, config=None):
+        state_dict = get_peft_model_state_dict(net)
+        # Apply Differential Privacy
+        #local_dp_obj.apply(state_dict)
+        return [val.cpu().numpy() for _, val in state_dict.items()]
 
-        def set_parameters(self, parameters):
-            params_dict = zip(peft_state_dict_keys, parameters)
-            state_dict = {k: torch.Tensor(v) for k, v in params_dict}
-            set_peft_model_state_dict(net, state_dict)
+    def set_parameters(self, parameters):
+        params_dict = zip(peft_state_dict_keys, parameters)
+        state_dict = {k: torch.Tensor(v) for k, v in params_dict}
+        set_peft_model_state_dict(net, state_dict)
 
-        def fit(self, parameters, config):
-            self.set_parameters(parameters)
-            logging.info(f"Client {RANK} Training Started...")
-            train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
-            # Apply Local Differential Privacy before sending parameters to the server
-            #state_dict = get_peft_model_state_dict(net)
-            #local_dp_obj.apply(state_dict)
-            
-            return self.get_parameters(), len(trainloader), {}
-            #return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
+    def fit(self, parameters, config):
+        self.set_parameters(parameters)
+        logging.info(f"Client {RANK} Training Started...")
+        train(net, trainloader, epochs=args.client_epochs, lr=args.client_lr)
+        # Apply Local Differential Privacy before sending parameters to the server
+        #state_dict = get_peft_model_state_dict(net)
+        #local_dp_obj.apply(state_dict)
+        
+        return self.get_parameters(), len(trainloader), {}
+        #return [val.cpu().numpy() for _, val in state_dict.items()], len(trainloader), {}
 
-        def evaluate(self, parameters, config):
-            self.set_parameters(parameters)
-            loss, accuracy = test(net, testloader)
-            return float(loss), len(testloader), {"accuracy": float(accuracy)}
+    def evaluate(self, parameters, config):
+        self.set_parameters(parameters)
+        loss, accuracy = test(net, testloader)
+        return float(loss), len(testloader), {"accuracy": float(accuracy)}
 
-    # Apply Differential Privacy
-    local_dp_obj = LocalDpMod(
-        epsilon=8,
-        delta=1e-5,
-        clipping_norm=10,
-        sensitivity=1.0,
-    )
-    
-    # define client fn
-    def client_fn(cid):
-        return Client()
-    
-    # Start client App
-    app = fl.client.ClientApp(
-        client_fn=client_fn,
-        mods = [local_dp_obj]
-    )
-    
-    # Start client
-    #fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
+# Apply Differential Privacy
+local_dp_obj = LocalDpMod(
+    epsilon=8,
+    delta=1e-5,
+    clipping_norm=10,
+    sensitivity=1.0,
+)
+
+# define client fn
+def client_fn(cid):
+    return Client()
+
+# Start client App
+app = fl.client.ClientApp(
+    client_fn=client_fn,
+    mods = [local_dp_obj]
+)
+
+# Start client
+#fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
