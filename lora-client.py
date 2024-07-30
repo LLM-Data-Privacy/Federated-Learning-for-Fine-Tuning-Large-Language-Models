@@ -44,11 +44,13 @@ def train(net, trainloader, epochs, lr):
     
     sample_rate = len(trainloader.dataset) / len(trainloader)
     
-    net, optimizer, trainloader = privacy_engine.make_private(
+    net, optimizer, trainloader = privacy_engine.make_private_with_epsilon(
         module=net,
         optimizer=optimizer,
         data_loader=trainloader,
-        noise_multiplier=1.3,
+        epochs = epochs,
+        target_epsilon = epsilon,
+        target_delta = delta,
         max_grad_norm=1.0
     )
     
