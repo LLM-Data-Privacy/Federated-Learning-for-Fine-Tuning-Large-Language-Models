@@ -40,7 +40,18 @@ CHECKPOINT = args.client_ckpt
 def train(net, trainloader, epochs, lr):
     optimizer = AdamW(net.parameters(), lr=lr, no_deprecation_warning=True)
     
+    privacy_engine = PrivacyEngine()
+    
     sample_rate = len(trainloader.dataset) / len(trainloader)
+    
+    net, optimizer, trainloader = privacy_engine.make_private(
+        module=net,
+        optimizer=optimizer,
+        data_loader=trainloader,
+        noise_multiplier=1.3,
+        max_grad_norm=1.0
+    )
+    
     #noise_multiplier = PrivacyEngine.get_noise_multiplier(
     #    target_epsilon=epsilon, target_delta=delta, sample_rate=sample_rate
     #)
