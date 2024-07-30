@@ -1,8 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=superlink
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --ntasks=6  # 1 for superlink, 1 for server, 4 for clients
 #SBATCH --time=01:30:00
+
+
+cd barn/DP-LoRA/Federated_Learning
+
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate DPLoRA
 
 module load gcc/8.4.0/1  cuda/10.2
 module load openmpi/4.0.3/1
