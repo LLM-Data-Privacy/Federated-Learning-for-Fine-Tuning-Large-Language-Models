@@ -6,11 +6,11 @@ conda activate DPLoRA
 
 # Set the environment variable before running the script
 # export TRANSFORMERS_CACHE=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
-export HF_DATASETS_CACHE=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
-export HF_HOME=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+export HF_DATASETS_CACHE=/gpfs/u/home/FNAI/FNAIchpn/scratch/huggingface
+export HF_HOME=/gpfs/u/home/FNAI/FNAIchpn/scratch/huggingface
 
 # Create the cache directory if doesn't exist
-mkdir -p /gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+mkdir -p /gpfs/u/home/FNAI/FNAIchpn/scratch/huggingface
 
 # Unset Proxy
 unset http_proxy
