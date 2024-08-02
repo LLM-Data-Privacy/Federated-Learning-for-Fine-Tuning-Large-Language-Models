@@ -1,3 +1,23 @@
+#!/bin/bash
+
+# Activate the Conda Environment
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate DPLoRA
+
+# Set the environment variable before running the script
+# export TRANSFORMERS_CACHE=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+export HF_DATASETS_CACHE=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+export HF_HOME=/gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+
+# Create the cache directory if doesn't exist
+mkdir -p /gpfs/u/home/FNAI/FNAIhrnb/scratch/huggingface
+
+# Unset Proxy
+unset http_proxy
+unset https_proxy
+
+# Set NO_PROXY to bypass proxy for local communication
+export NO_PROXY=127.0.0.1,localhost
 echo "NO_PROXY=$NO_PROXY"
 
 echo "Starting Server"
